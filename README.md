@@ -5,8 +5,10 @@ A small AXI-style CLI for sending Telegram messages through a bot.
 ## Install
 
 ```sh
-go build -o ~/.local/bin/tg .
+just install   # builds and copies to ~/.local/bin/tg
 ```
+
+See `just --list` for all available commands (build, check, fmt, run, clean).
 
 ## Setup
 
