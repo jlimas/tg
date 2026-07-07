@@ -26,6 +26,7 @@ func cmdHelp() int {
 	fmt.Println("  voice        send a voice message")
 	fmt.Println("  location     send a location")
 	fmt.Println("  venue        send a venue")
+	fmt.Println("  contact      send a contact")
 	fmt.Println()
 	fmt.Println("examples:")
 	fmt.Println(`  tg config set --bot-token "123:ABC..."`)
@@ -39,6 +40,7 @@ func cmdHelp() int {
 	fmt.Println(`  tg voice --to 123456789 --file ./note.ogg`)
 	fmt.Println(`  tg location --to 123456789 --lat 40.7580 --long -73.9855`)
 	fmt.Println(`  tg venue --to 123456789 --lat 40.75 --long -73.98 --title "MSG" --address "4 Penn Plaza"`)
+	fmt.Println(`  tg contact --to 123456789 --phone "+15551234567" --first-name "Ada"`)
 	fmt.Println()
 	fmt.Println("run `tg <command> --help` for details on a specific command")
 	return 0
