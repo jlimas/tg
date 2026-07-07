@@ -47,27 +47,11 @@ func commonParamsFrom(values map[string]string, chatID string, usage string) (te
 		return telegram.CommonParams{}, exitCode
 	}
 
-	readBoolean := func(name string) (bool, int) {
-		value, ok := values[name]
-		if !ok {
-			return false, 0
-		}
-		switch value {
-		case "true":
-			return true, 0
-		case "false":
-			return false, 0
-		default:
-			output.Error(fmt.Sprintf("invalid --%s %q", name, value), fmt.Sprintf("use --%s or --%s=false", name, name))
-			return false, 2
-		}
-	}
-
-	silent, exitCode := readBoolean("silent")
+	silent, exitCode := boolFlag(values, "silent")
 	if exitCode != 0 {
 		return telegram.CommonParams{}, exitCode
 	}
-	protect, exitCode := readBoolean("protect")
+	protect, exitCode := boolFlag(values, "protect")
 	if exitCode != 0 {
 		return telegram.CommonParams{}, exitCode
 	}
@@ -80,6 +64,22 @@ func commonParamsFrom(values map[string]string, chatID string, usage string) (te
 		ProtectContent:      protect,
 		MessageThreadID:     threadID,
 	}, 0
+}
+
+func boolFlag(values map[string]string, name string) (bool, int) {
+	value, ok := values[name]
+	if !ok {
+		return false, 0
+	}
+	switch value {
+	case "true":
+		return true, 0
+	case "false":
+		return false, 0
+	default:
+		output.Error(fmt.Sprintf("invalid --%s %q", name, value), fmt.Sprintf("use --%s or --%s=false", name, name))
+		return false, 2
+	}
 }
 
 func intFlag(values map[string]string, name string, usage string) (int, int) {

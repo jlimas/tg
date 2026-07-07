@@ -28,6 +28,7 @@ func cmdHome() int {
 	fmt.Println("config: configured")
 	output.Help(
 		`tg text --to <chat_id> --message "..."`,
+		`tg photo --to <chat_id> --file ./cat.jpg --caption "hi"`,
 		"tg config show",
 	)
 	return 0

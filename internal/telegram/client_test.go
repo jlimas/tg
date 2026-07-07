@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"os"
@@ -165,6 +166,179 @@ func TestSendMessageIncludesCommonParams(t *testing.T) {
 		if gotQuery.Get(name) != value {
 			t.Fatalf("%s = %q, want %q", name, gotQuery.Get(name), value)
 		}
+	}
+}
+
+func TestSendMediaRemoteURLAndFileIDUseForm(t *testing.T) {
+	tests := []struct {
+		name string
+		file InputFile
+	}{
+		{
+			name: "remote URL",
+			file: InputFile{Kind: InputFileRemoteURL, Value: "https://example.com/cat.jpg"},
+		},
+		{
+			name: "file ID",
+			file: InputFile{Kind: InputFileFileID, Value: "AgACAgIAAx0FakeFileID"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var gotReq *http.Request
+			client := NewClient("TOKEN")
+			client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				gotReq = req
+				return okMessageResponse(), nil
+			})
+
+			msg, err := client.SendMedia(context.Background(), "sendPhoto", "photo", tt.file, CommonParams{
+				ChatID:              "123",
+				ParseMode:           "HTML",
+				DisableNotification: true,
+				MessageThreadID:     654,
+			}, map[string]string{
+				"caption":     "hi",
+				"has_spoiler": "true",
+				"chat_id":     "999",
+			})
+			if err != nil {
+				t.Fatalf("SendMedia returned error: %v", err)
+			}
+			if msg.MessageID != 42 {
+				t.Fatalf("MessageID = %d, want 42", msg.MessageID)
+			}
+			if gotReq == nil {
+				t.Fatal("no request captured")
+			}
+			if gotReq.Method != http.MethodPost {
+				t.Fatalf("Method = %q, want %q", gotReq.Method, http.MethodPost)
+			}
+			if gotReq.URL.Path != "/botTOKEN/sendPhoto" {
+				t.Fatalf("URL path = %q, want /botTOKEN/sendPhoto", gotReq.URL.Path)
+			}
+			if gotReq.Body != nil {
+				t.Fatal("Body is non-nil, want nil")
+			}
+			if gotReq.Header.Get("Content-Type") != "" {
+				t.Fatalf("Content-Type = %q, want empty", gotReq.Header.Get("Content-Type"))
+			}
+
+			gotQuery := gotReq.URL.Query()
+			want := map[string]string{
+				"chat_id":              "999",
+				"parse_mode":           "HTML",
+				"disable_notification": "true",
+				"message_thread_id":    "654",
+				"caption":              "hi",
+				"has_spoiler":          "true",
+				"photo":                tt.file.Value,
+			}
+			for name, value := range want {
+				if gotQuery.Get(name) != value {
+					t.Fatalf("%s = %q, want %q", name, gotQuery.Get(name), value)
+				}
+			}
+		})
+	}
+}
+
+func TestSendMediaLocalUploadUsesMultipart(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "cat.jpg")
+	if err := os.WriteFile(path, []byte("photo bytes"), 0o600); err != nil {
+		t.Fatalf("write temp file: %v", err)
+	}
+
+	var gotReq *http.Request
+	var gotForm *multipart.Form
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		gotReq = req
+		form, err := req.MultipartReader()
+		if err != nil {
+			t.Fatalf("MultipartReader returned error: %v", err)
+		}
+		gotForm, err = form.ReadForm(1024 * 1024)
+		if err != nil {
+			t.Fatalf("ReadForm returned error: %v", err)
+		}
+		return okMessageResponse(), nil
+	})
+
+	_, err := client.SendMedia(context.Background(), "sendPhoto", "photo", InputFile{
+		Kind:  InputFileLocalUpload,
+		Value: path,
+	}, CommonParams{
+		ChatID:    "123",
+		ParseMode: "Markdown",
+	}, map[string]string{
+		"caption":     "hi",
+		"has_spoiler": "true",
+	})
+	if err != nil {
+		t.Fatalf("SendMedia returned error: %v", err)
+	}
+	if gotReq == nil {
+		t.Fatal("no request captured")
+	}
+	if gotReq.URL.RawQuery != "" {
+		t.Fatalf("RawQuery = %q, want empty", gotReq.URL.RawQuery)
+	}
+	if !strings.HasPrefix(gotReq.Header.Get("Content-Type"), "multipart/form-data;") {
+		t.Fatalf("Content-Type = %q, want multipart/form-data", gotReq.Header.Get("Content-Type"))
+	}
+	if gotForm == nil {
+		t.Fatal("no multipart form captured")
+	}
+	defer gotForm.RemoveAll()
+
+	wantValues := map[string]string{
+		"chat_id":     "123",
+		"parse_mode":  "Markdown",
+		"caption":     "hi",
+		"has_spoiler": "true",
+	}
+	for name, value := range wantValues {
+		got := gotForm.Value[name]
+		if len(got) != 1 || got[0] != value {
+			t.Fatalf("%s = %#v, want [%q]", name, got, value)
+		}
+	}
+
+	files := gotForm.File["photo"]
+	if len(files) != 1 {
+		t.Fatalf("len(files) = %d, want 1", len(files))
+	}
+	if files[0].Filename != "cat.jpg" {
+		t.Fatalf("filename = %q, want cat.jpg", files[0].Filename)
+	}
+	uploaded, err := files[0].Open()
+	if err != nil {
+		t.Fatalf("open uploaded file: %v", err)
+	}
+	defer uploaded.Close()
+	contents, err := io.ReadAll(uploaded)
+	if err != nil {
+		t.Fatalf("read uploaded file: %v", err)
+	}
+	if string(contents) != "photo bytes" {
+		t.Fatalf("uploaded contents = %q, want photo bytes", contents)
+	}
+}
+
+func okMessageResponse() *http.Response {
+	return &http.Response{
+		StatusCode: http.StatusOK,
+		Body: io.NopCloser(strings.NewReader(`{
+			"ok": true,
+			"result": {
+				"message_id": 42,
+				"date": 1234567890,
+				"chat": {"id": 123}
+			}
+		}`)),
+		Header: make(http.Header),
 	}
 }
 
