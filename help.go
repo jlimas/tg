@@ -29,6 +29,7 @@ func cmdHelp() int {
 	fmt.Println("  venue        send a venue")
 	fmt.Println("  contact      send a contact")
 	fmt.Println("  dice         send a dice animation")
+	fmt.Println("  poll         send a poll")
 	fmt.Println()
 	fmt.Println("examples:")
 	fmt.Println(`  tg config set --bot-token "123:ABC..."`)
@@ -45,6 +46,7 @@ func cmdHelp() int {
 	fmt.Println(`  tg venue --to 123456789 --lat 40.75 --long -73.98 --title "MSG" --address "4 Penn Plaza"`)
 	fmt.Println(`  tg contact --to 123456789 --phone "+15551234567" --first-name "Ada"`)
 	fmt.Println(`  tg dice --to 123456789 --emoji "🎯"`)
+	fmt.Println(`  tg poll --to 123456789 --question "Lunch?" --option Pizza --option Tacos`)
 	fmt.Println()
 	fmt.Println("run `tg <command> --help` for details on a specific command")
 	return 0
