@@ -35,6 +35,7 @@ func cmdHome() int {
 		`tg animation --to <chat_id> --file ./loop.gif --caption "launch"`,
 		`tg audio --to <chat_id> --file ./song.mp3 --performer "X" --title "Y"`,
 		`tg voice --to <chat_id> --file ./note.ogg`,
+		`tg location --to <chat_id> --lat 40.7580 --long -73.9855`,
 		"tg config show",
 	)
 	return 0

@@ -94,3 +94,16 @@ func intFlag(values map[string]string, name string, usage string) (int, int) {
 	}
 	return parsed, 0
 }
+
+func floatFlag(values map[string]string, name string, usage string) (float64, int) {
+	value, ok := values[name]
+	if !ok {
+		return 0, 0
+	}
+	parsed, err := strconv.ParseFloat(value, 64)
+	if err != nil {
+		output.Error(fmt.Sprintf("invalid --%s %q", name, value), usage)
+		return 0, 2
+	}
+	return parsed, 0
+}

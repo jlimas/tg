@@ -56,6 +56,7 @@ tg video-note --to 123456789 --file ./round.mp4
 tg animation --to 123456789 --file ./loop.gif --caption "launch"
 tg audio --to 123456789 --file ./song.mp3 --performer "X" --title "Y"
 tg voice --to 123456789 --file ./note.ogg
+tg location --to 123456789 --lat 40.7580 --long -73.9855
 tg text --message "hello"                   # uses default_chat_id
 tg text --to 123456789 --message "*bold*" --parse-mode Markdown
 tg --help                                   # full command reference

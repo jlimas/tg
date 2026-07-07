@@ -169,6 +169,60 @@ func TestSendMessageIncludesCommonParams(t *testing.T) {
 	}
 }
 
+func TestSendUsesFormRequestWithCommonAndExtraParams(t *testing.T) {
+	var gotReq *http.Request
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		gotReq = req
+		return okMessageResponse(), nil
+	})
+
+	msg, err := client.Send(context.Background(), "sendLocation", CommonParams{
+		ChatID:              "123",
+		DisableNotification: true,
+		MessageThreadID:     654,
+	}, map[string]string{
+		"latitude":  "40.758",
+		"longitude": "-73.9855",
+		"chat_id":   "999",
+	})
+	if err != nil {
+		t.Fatalf("Send returned error: %v", err)
+	}
+	if msg.MessageID != 42 {
+		t.Fatalf("MessageID = %d, want 42", msg.MessageID)
+	}
+	if gotReq == nil {
+		t.Fatal("no request captured")
+	}
+	if gotReq.Method != http.MethodPost {
+		t.Fatalf("Method = %q, want %q", gotReq.Method, http.MethodPost)
+	}
+	if gotReq.URL.Path != "/botTOKEN/sendLocation" {
+		t.Fatalf("URL path = %q, want /botTOKEN/sendLocation", gotReq.URL.Path)
+	}
+	if gotReq.Body != nil {
+		t.Fatal("Body is non-nil, want nil")
+	}
+	if gotReq.Header.Get("Content-Type") != "" {
+		t.Fatalf("Content-Type = %q, want empty", gotReq.Header.Get("Content-Type"))
+	}
+
+	gotQuery := gotReq.URL.Query()
+	want := map[string]string{
+		"chat_id":              "999",
+		"disable_notification": "true",
+		"message_thread_id":    "654",
+		"latitude":             "40.758",
+		"longitude":            "-73.9855",
+	}
+	for name, value := range want {
+		if gotQuery.Get(name) != value {
+			t.Fatalf("%s = %q, want %q", name, gotQuery.Get(name), value)
+		}
+	}
+}
+
 func TestSendMediaRemoteURLAndFileIDUseForm(t *testing.T) {
 	tests := []struct {
 		name string
