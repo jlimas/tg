@@ -26,6 +26,8 @@ func run(args []string) int {
 		return cmdDocument(args[1:])
 	case "video":
 		return cmdVideo(args[1:])
+	case "audio":
+		return cmdAudio(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}
