@@ -6,8 +6,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 	"time"
 )
 
@@ -54,6 +60,70 @@ type apiResponse[T any] struct {
 	Description string `json:"description"`
 }
 
+// InputFileKind describes how a Telegram media argument should be sent.
+type InputFileKind string
+
+const (
+	InputFileLocalUpload InputFileKind = "local_upload"
+	InputFileRemoteURL   InputFileKind = "remote_url"
+	InputFileFileID      InputFileKind = "file_id"
+)
+
+// InputFile is a Telegram media argument resolved to a local upload, remote
+// URL, or file_id-like string.
+type InputFile struct {
+	Kind  InputFileKind
+	Value string
+}
+
+// ResolveInputFile classifies s using Telegram's InputFile conventions.
+func ResolveInputFile(s string) InputFile {
+	if _, err := os.Stat(s); err == nil {
+		return InputFile{Kind: InputFileLocalUpload, Value: s}
+	}
+	if strings.HasPrefix(s, "http://") || strings.HasPrefix(s, "https://") {
+		return InputFile{Kind: InputFileRemoteURL, Value: s}
+	}
+	return InputFile{Kind: InputFileFileID, Value: s}
+}
+
+// CommonParams are fields shared by most Telegram send methods.
+type CommonParams struct {
+	ChatID              string
+	ParseMode           string
+	ReplyToMessageID    int
+	DisableNotification bool
+	ProtectContent      bool
+	MessageThreadID     int
+}
+
+func (p CommonParams) toParams() map[string]string {
+	params := map[string]string{
+		"chat_id": p.ChatID,
+	}
+	if p.ParseMode != "" {
+		params["parse_mode"] = p.ParseMode
+	}
+	if p.ReplyToMessageID != 0 {
+		replyParameters, _ := json.Marshal(struct {
+			MessageID int `json:"message_id"`
+		}{
+			MessageID: p.ReplyToMessageID,
+		})
+		params["reply_parameters"] = string(replyParameters)
+	}
+	if p.DisableNotification {
+		params["disable_notification"] = "true"
+	}
+	if p.ProtectContent {
+		params["protect_content"] = "true"
+	}
+	if p.MessageThreadID != 0 {
+		params["message_thread_id"] = strconv.Itoa(p.MessageThreadID)
+	}
+	return params
+}
+
 // SendMessageParams are the inputs for SendMessage. ParseMode may be empty,
 // "Markdown", "MarkdownV2", or "HTML".
 type SendMessageParams struct {
@@ -64,20 +134,102 @@ type SendMessageParams struct {
 
 // SendMessage posts a text message to a chat and returns the sent message.
 func (c *Client) SendMessage(ctx context.Context, p SendMessageParams) (*Message, error) {
-	form := url.Values{}
-	form.Set("chat_id", p.ChatID)
-	form.Set("text", p.Text)
-	if p.ParseMode != "" {
-		form.Set("parse_mode", p.ParseMode)
+	params := CommonParams{
+		ChatID:    p.ChatID,
+		ParseMode: p.ParseMode,
+	}.toParams()
+	params["text"] = p.Text
+
+	return c.call(ctx, "sendMessage", params, nil)
+}
+
+func (c *Client) call(ctx context.Context, method string, params map[string]string, files map[string]InputFile) (*Message, error) {
+	formParams := make(map[string]string, len(params)+len(files))
+	for name, value := range params {
+		formParams[name] = value
 	}
 
-	endpoint := fmt.Sprintf("%s/bot%s/sendMessage", apiBase, c.token)
+	localFiles := make(map[string]InputFile)
+	for name, file := range files {
+		if file.Kind == InputFileLocalUpload {
+			localFiles[name] = file
+			continue
+		}
+		formParams[name] = file.Value
+	}
+
+	endpoint := fmt.Sprintf("%s/bot%s/%s", apiBase, c.token, method)
+	if len(localFiles) == 0 {
+		return c.callForm(ctx, endpoint, formParams)
+	}
+	return c.callMultipart(ctx, endpoint, formParams, localFiles)
+}
+
+func (c *Client) callForm(ctx context.Context, endpoint string, params map[string]string) (*Message, error) {
+	form := url.Values{}
+	for name, value := range params {
+		form.Set(name, value)
+	}
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
 		return nil, err
 	}
 	req.URL.RawQuery = form.Encode()
 
+	return c.do(req)
+}
+
+func (c *Client) callMultipart(ctx context.Context, endpoint string, params map[string]string, files map[string]InputFile) (*Message, error) {
+	bodyReader, bodyWriter := io.Pipe()
+	writer := multipart.NewWriter(bodyWriter)
+	go func() {
+		var err error
+		defer func() {
+			if closeErr := writer.Close(); err == nil {
+				err = closeErr
+			}
+			_ = bodyWriter.CloseWithError(err)
+		}()
+
+		for name, value := range params {
+			if err = writer.WriteField(name, value); err != nil {
+				return
+			}
+		}
+		for name, file := range files {
+			if err = addInputFilePart(writer, name, file); err != nil {
+				return
+			}
+		}
+	}()
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bodyReader)
+	if err != nil {
+		_ = bodyReader.Close()
+		return nil, err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	return c.do(req)
+}
+
+func addInputFilePart(writer *multipart.Writer, fieldName string, file InputFile) error {
+	f, err := os.Open(file.Value)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	part, err := writer.CreateFormFile(fieldName, filepath.Base(file.Value))
+	if err != nil {
+		return err
+	}
+	_, err = io.Copy(part, f)
+	return err
+}
+
+func (c *Client) do(req *http.Request) (*Message, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("contacting telegram: %w", err)
