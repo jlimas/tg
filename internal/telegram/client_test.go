@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -118,6 +119,52 @@ func TestSendMessagePreservesRawQueryPost(t *testing.T) {
 	}
 	if gotReq.Header.Get("Content-Type") != "" {
 		t.Fatalf("Content-Type = %q, want empty", gotReq.Header.Get("Content-Type"))
+	}
+}
+
+func TestSendMessageIncludesCommonParams(t *testing.T) {
+	var gotQuery url.Values
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		gotQuery = req.URL.Query()
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body: io.NopCloser(strings.NewReader(`{
+				"ok": true,
+				"result": {
+					"message_id": 42,
+					"date": 1234567890,
+					"chat": {"id": 123}
+				}
+			}`)),
+			Header: make(http.Header),
+		}, nil
+	})
+
+	_, err := client.SendMessage(context.Background(), SendMessageParams{
+		ChatID:              "123",
+		Text:                "hello",
+		ReplyToMessageID:    321,
+		DisableNotification: true,
+		ProtectContent:      true,
+		MessageThreadID:     654,
+	})
+	if err != nil {
+		t.Fatalf("SendMessage returned error: %v", err)
+	}
+
+	want := map[string]string{
+		"chat_id":              "123",
+		"text":                 "hello",
+		"reply_parameters":     `{"message_id":321}`,
+		"disable_notification": "true",
+		"protect_content":      "true",
+		"message_thread_id":    "654",
+	}
+	for name, value := range want {
+		if gotQuery.Get(name) != value {
+			t.Fatalf("%s = %q, want %q", name, gotQuery.Get(name), value)
+		}
 	}
 }
 

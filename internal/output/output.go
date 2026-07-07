@@ -29,7 +29,7 @@ func Block(name string, pairs []KV) {
 // Help prints one or more suggested next-step commands:
 //
 //	help[2]:
-//	  Run `tg send --to <chat_id> --text "..."` to send a message
+//	  Run `tg text --to <chat_id> --message "..."` to send a message
 //	  Run `tg config show` to see current configuration
 func Help(lines ...string) {
 	if len(lines) == 0 {

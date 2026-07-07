@@ -27,7 +27,7 @@ func cmdHome() int {
 
 	fmt.Println("config: configured")
 	output.Help(
-		`tg send --to <chat_id> --text "..."`,
+		`tg text --to <chat_id> --message "..."`,
 		"tg config show",
 	)
 	return 0

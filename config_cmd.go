@@ -51,7 +51,7 @@ func cmdConfigSet(args []string) int {
 		fmt.Println()
 		fmt.Println("flags:")
 		fmt.Println("  --bot-token <token>        bot token from @BotFather")
-		fmt.Println("  --default-chat-id <id>     chat id used by `tg send` when --to is omitted")
+		fmt.Println("  --default-chat-id <id>     chat id used by `tg text` when --to is omitted")
 		fmt.Println()
 		fmt.Println("example:")
 		fmt.Println(`  tg config set --bot-token "123456:AAExample-Token" --default-chat-id 987654321`)
@@ -90,7 +90,7 @@ func cmdConfigSet(args []string) int {
 	output.Line("config: saved to %s", path)
 	output.Help(
 		"tg config show",
-		`tg send --to <chat_id> --text "..."`,
+		`tg text --to <chat_id> --message "..."`,
 	)
 	return 0
 }

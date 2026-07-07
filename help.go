@@ -16,11 +16,11 @@ func cmdHelp() int {
 	fmt.Println("commands:")
 	fmt.Println("  config set   save the bot token and optional default chat id")
 	fmt.Println("  config show  show the current configuration")
-	fmt.Println("  send         send a text message")
+	fmt.Println("  text         send a text message")
 	fmt.Println()
 	fmt.Println("examples:")
 	fmt.Println(`  tg config set --bot-token "123:ABC..."`)
-	fmt.Println(`  tg send --to 123456789 --text "hello"`)
+	fmt.Println(`  tg text --to 123456789 --message "hello"`)
 	fmt.Println()
 	fmt.Println("run `tg <command> --help` for details on a specific command")
 	return 0

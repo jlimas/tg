@@ -18,8 +18,8 @@ func run(args []string) int {
 		return cmdHelp()
 	case "config":
 		return dispatchConfig(args[1:])
-	case "send":
-		return cmdSend(args[1:])
+	case "text":
+		return cmdText(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}
