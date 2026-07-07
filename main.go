@@ -26,6 +26,8 @@ func run(args []string) int {
 		return cmdDocument(args[1:])
 	case "video":
 		return cmdVideo(args[1:])
+	case "media-group":
+		return cmdMediaGroup(args[1:])
 	case "video-note":
 		return cmdVideoNote(args[1:])
 	case "animation":

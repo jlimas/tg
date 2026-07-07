@@ -31,6 +31,7 @@ func cmdHome() int {
 		`tg photo --to <chat_id> --file ./cat.jpg --caption "hi"`,
 		`tg document --to <chat_id> --file ./report.pdf --caption "Q3"`,
 		`tg video --to <chat_id> --file ./clip.mp4 --supports-streaming`,
+		`tg media-group --to <chat_id> --file a.jpg --file b.jpg`,
 		`tg video-note --to <chat_id> --file ./round.mp4`,
 		`tg animation --to <chat_id> --file ./loop.gif --caption "launch"`,
 		`tg sticker --to <chat_id> --file ./sticker.webp`,

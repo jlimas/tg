@@ -178,7 +178,53 @@ func (c *Client) SendMedia(ctx context.Context, method string, field string, fil
 	return c.call(ctx, method, params, files)
 }
 
+type inputMediaItem struct {
+	Type    string `json:"type"`
+	Media   string `json:"media"`
+	Caption string `json:"caption,omitempty"`
+}
+
+// SendMediaGroup posts an album using Telegram's sendMediaGroup method.
+// caption is applied only to the first item, which Telegram shows as the
+// album caption.
+func (c *Client) SendMediaGroup(ctx context.Context, common CommonParams, mediaType string, caption string, files []InputFile) ([]Message, error) {
+	params := common.toParams()
+	uploads := make(map[string]InputFile)
+	media := make([]inputMediaItem, len(files))
+	for i, file := range files {
+		mediaValue := file.Value
+		if file.Kind == InputFileLocalUpload {
+			fieldName := fmt.Sprintf("file%d", i)
+			mediaValue = "attach://" + fieldName
+			uploads[fieldName] = file
+		}
+		media[i] = inputMediaItem{
+			Type:  mediaType,
+			Media: mediaValue,
+		}
+		if i == 0 {
+			media[i].Caption = caption
+		}
+	}
+
+	mediaJSON, err := json.Marshal(media)
+	if err != nil {
+		return nil, err
+	}
+	params["media"] = string(mediaJSON)
+
+	return call[[]Message](ctx, c, "sendMediaGroup", params, uploads)
+}
+
 func (c *Client) call(ctx context.Context, method string, params map[string]string, files map[string]InputFile) (*Message, error) {
+	msg, err := call[Message](ctx, c, method, params, files)
+	if err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
+func call[T any](ctx context.Context, c *Client, method string, params map[string]string, files map[string]InputFile) (T, error) {
 	formParams := make(map[string]string, len(params)+len(files))
 	for name, value := range params {
 		formParams[name] = value
@@ -195,12 +241,20 @@ func (c *Client) call(ctx context.Context, method string, params map[string]stri
 
 	endpoint := fmt.Sprintf("%s/bot%s/%s", apiBase, c.token, method)
 	if len(localFiles) == 0 {
-		return c.callForm(ctx, endpoint, formParams)
+		return callForm[T](ctx, c, endpoint, formParams)
 	}
-	return c.callMultipart(ctx, endpoint, formParams, localFiles)
+	return callMultipart[T](ctx, c, endpoint, formParams, localFiles)
 }
 
 func (c *Client) callForm(ctx context.Context, endpoint string, params map[string]string) (*Message, error) {
+	msg, err := callForm[Message](ctx, c, endpoint, params)
+	if err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
+func callForm[T any](ctx context.Context, c *Client, endpoint string, params map[string]string) (T, error) {
 	form := url.Values{}
 	for name, value := range params {
 		form.Set(name, value)
@@ -208,14 +262,23 @@ func (c *Client) callForm(ctx context.Context, endpoint string, params map[strin
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
 	if err != nil {
-		return nil, err
+		var zero T
+		return zero, err
 	}
 	req.URL.RawQuery = form.Encode()
 
-	return c.do(req)
+	return do[T](c, req)
 }
 
 func (c *Client) callMultipart(ctx context.Context, endpoint string, params map[string]string, files map[string]InputFile) (*Message, error) {
+	msg, err := callMultipart[Message](ctx, c, endpoint, params, files)
+	if err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
+func callMultipart[T any](ctx context.Context, c *Client, endpoint string, params map[string]string, files map[string]InputFile) (T, error) {
 	bodyReader, bodyWriter := io.Pipe()
 	writer := multipart.NewWriter(bodyWriter)
 	go func() {
@@ -242,11 +305,12 @@ func (c *Client) callMultipart(ctx context.Context, endpoint string, params map[
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bodyReader)
 	if err != nil {
 		_ = bodyReader.Close()
-		return nil, err
+		var zero T
+		return zero, err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	return c.do(req)
+	return do[T](c, req)
 }
 
 func addInputFilePart(writer *multipart.Writer, fieldName string, file InputFile) error {
@@ -269,18 +333,29 @@ func addInputFilePart(writer *multipart.Writer, fieldName string, file InputFile
 }
 
 func (c *Client) do(req *http.Request) (*Message, error) {
+	msg, err := do[Message](c, req)
+	if err != nil {
+		return nil, err
+	}
+	return &msg, nil
+}
+
+func do[T any](c *Client, req *http.Request) (T, error) {
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf("contacting telegram: %w", err)
+		var zero T
+		return zero, fmt.Errorf("contacting telegram: %w", err)
 	}
 	defer resp.Body.Close()
 
-	var parsed apiResponse[Message]
+	var parsed apiResponse[T]
 	if err := json.NewDecoder(resp.Body).Decode(&parsed); err != nil {
-		return nil, fmt.Errorf("decoding telegram response: %w", err)
+		var zero T
+		return zero, fmt.Errorf("decoding telegram response: %w", err)
 	}
 	if !parsed.OK {
-		return nil, &APIError{Code: parsed.ErrorCode, Description: parsed.Description}
+		var zero T
+		return zero, &APIError{Code: parsed.ErrorCode, Description: parsed.Description}
 	}
-	return &parsed.Result, nil
+	return parsed.Result, nil
 }
