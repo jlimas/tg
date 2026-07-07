@@ -40,6 +40,8 @@ func run(args []string) int {
 		return cmdVenue(args[1:])
 	case "contact":
 		return cmdContact(args[1:])
+	case "dice":
+		return cmdDice(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}
