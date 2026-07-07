@@ -103,11 +103,10 @@ Releases are cut by pushing a `vX.Y.Z` tag; GitHub Actions builds
 cross-platform binaries with [goreleaser](https://goreleaser.com) and
 publishes them to GitHub Releases.
 
-## Roadmap
+## Status
 
-MVP covers sending text messages. Natural next steps: photo/file uploads,
-reading incoming messages (`getUpdates`), and multi-bot/account config
-profiles.
+All intended send-message features are implemented; the project is now in
+maintenance mode.
 
 ## License
 
