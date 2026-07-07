@@ -202,7 +202,7 @@ func TestSendMediaRemoteURLAndFileIDUseForm(t *testing.T) {
 				"caption":     "hi",
 				"has_spoiler": "true",
 				"chat_id":     "999",
-			})
+			}, nil)
 			if err != nil {
 				t.Fatalf("SendMedia returned error: %v", err)
 			}
@@ -275,7 +275,7 @@ func TestSendMediaLocalUploadUsesMultipart(t *testing.T) {
 	}, map[string]string{
 		"caption":     "hi",
 		"has_spoiler": "true",
-	})
+	}, nil)
 	if err != nil {
 		t.Fatalf("SendMedia returned error: %v", err)
 	}
@@ -327,6 +327,128 @@ func TestSendMediaLocalUploadUsesMultipart(t *testing.T) {
 	}
 }
 
+func TestSendMediaLocalUploadIncludesExtraFiles(t *testing.T) {
+	dir := t.TempDir()
+	documentPath := filepath.Join(dir, "report.pdf")
+	if err := os.WriteFile(documentPath, []byte("document bytes"), 0o600); err != nil {
+		t.Fatalf("write document file: %v", err)
+	}
+	thumbnailPath := filepath.Join(dir, "cover.jpg")
+	if err := os.WriteFile(thumbnailPath, []byte("thumbnail bytes"), 0o600); err != nil {
+		t.Fatalf("write thumbnail file: %v", err)
+	}
+
+	var gotForm *multipart.Form
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		form, err := req.MultipartReader()
+		if err != nil {
+			t.Fatalf("MultipartReader returned error: %v", err)
+		}
+		gotForm, err = form.ReadForm(1024 * 1024)
+		if err != nil {
+			t.Fatalf("ReadForm returned error: %v", err)
+		}
+		return okMessageResponse(), nil
+	})
+
+	_, err := client.SendMedia(context.Background(), "sendDocument", "document", InputFile{
+		Kind:  InputFileLocalUpload,
+		Value: documentPath,
+	}, CommonParams{
+		ChatID: "123",
+	}, map[string]string{
+		"caption": "Q3",
+	}, map[string]InputFile{
+		"thumbnail": {
+			Kind:  InputFileLocalUpload,
+			Value: thumbnailPath,
+		},
+	})
+	if err != nil {
+		t.Fatalf("SendMedia returned error: %v", err)
+	}
+	if gotForm == nil {
+		t.Fatal("no multipart form captured")
+	}
+	defer gotForm.RemoveAll()
+
+	if got := gotForm.Value["caption"]; len(got) != 1 || got[0] != "Q3" {
+		t.Fatalf("caption = %#v, want [Q3]", got)
+	}
+	documentFiles := gotForm.File["document"]
+	if len(documentFiles) != 1 {
+		t.Fatalf("len(documentFiles) = %d, want 1", len(documentFiles))
+	}
+	if documentFiles[0].Filename != "report.pdf" {
+		t.Fatalf("document filename = %q, want report.pdf", documentFiles[0].Filename)
+	}
+	if got := documentFiles[0].Header.Get("Content-Type"); got != "application/octet-stream" {
+		t.Fatalf("document Content-Type = %q, want application/octet-stream", got)
+	}
+	if contents := readUploadedFile(t, documentFiles[0]); contents != "document bytes" {
+		t.Fatalf("document contents = %q, want document bytes", contents)
+	}
+
+	thumbnailFiles := gotForm.File["thumbnail"]
+	if len(thumbnailFiles) != 1 {
+		t.Fatalf("len(thumbnailFiles) = %d, want 1", len(thumbnailFiles))
+	}
+	if thumbnailFiles[0].Filename != "cover.jpg" {
+		t.Fatalf("thumbnail filename = %q, want cover.jpg", thumbnailFiles[0].Filename)
+	}
+	if got := thumbnailFiles[0].Header.Get("Content-Type"); got != "application/octet-stream" {
+		t.Fatalf("thumbnail Content-Type = %q, want application/octet-stream", got)
+	}
+	if contents := readUploadedFile(t, thumbnailFiles[0]); contents != "thumbnail bytes" {
+		t.Fatalf("thumbnail contents = %q, want thumbnail bytes", contents)
+	}
+}
+
+func TestSendMediaLocalUploadUsesInputFileName(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "generated.tmp")
+	if err := os.WriteFile(path, []byte("document bytes"), 0o600); err != nil {
+		t.Fatalf("write temp file: %v", err)
+	}
+
+	var gotForm *multipart.Form
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		form, err := req.MultipartReader()
+		if err != nil {
+			t.Fatalf("MultipartReader returned error: %v", err)
+		}
+		gotForm, err = form.ReadForm(1024 * 1024)
+		if err != nil {
+			t.Fatalf("ReadForm returned error: %v", err)
+		}
+		return okMessageResponse(), nil
+	})
+
+	_, err := client.SendMedia(context.Background(), "sendDocument", "document", InputFile{
+		Kind:     InputFileLocalUpload,
+		Value:    path,
+		FileName: "report Q3.pdf",
+	}, CommonParams{
+		ChatID: "123",
+	}, nil, nil)
+	if err != nil {
+		t.Fatalf("SendMedia returned error: %v", err)
+	}
+	if gotForm == nil {
+		t.Fatal("no multipart form captured")
+	}
+	defer gotForm.RemoveAll()
+
+	files := gotForm.File["document"]
+	if len(files) != 1 {
+		t.Fatalf("len(files) = %d, want 1", len(files))
+	}
+	if files[0].Filename != "report Q3.pdf" {
+		t.Fatalf("filename = %q, want report Q3.pdf", files[0].Filename)
+	}
+}
+
 func okMessageResponse() *http.Response {
 	return &http.Response{
 		StatusCode: http.StatusOK,
@@ -346,4 +468,20 @@ type roundTripFunc func(*http.Request) (*http.Response, error)
 
 func (f roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
 	return f(req)
+}
+
+func readUploadedFile(t *testing.T, file *multipart.FileHeader) string {
+	t.Helper()
+
+	uploaded, err := file.Open()
+	if err != nil {
+		t.Fatalf("open uploaded file: %v", err)
+	}
+	defer uploaded.Close()
+
+	contents, err := io.ReadAll(uploaded)
+	if err != nil {
+		t.Fatalf("read uploaded file: %v", err)
+	}
+	return string(contents)
 }

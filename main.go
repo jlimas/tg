@@ -22,6 +22,8 @@ func run(args []string) int {
 		return cmdText(args[1:])
 	case "photo":
 		return cmdPhoto(args[1:])
+	case "document":
+		return cmdDocument(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}

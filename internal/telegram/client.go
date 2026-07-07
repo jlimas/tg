@@ -72,8 +72,9 @@ const (
 // InputFile is a Telegram media argument resolved to a local upload, remote
 // URL, or file_id-like string.
 type InputFile struct {
-	Kind  InputFileKind
-	Value string
+	Kind     InputFileKind
+	Value    string
+	FileName string
 }
 
 // ResolveInputFile classifies s using Telegram's InputFile conventions.
@@ -153,13 +154,16 @@ func (c *Client) SendMessage(ctx context.Context, p SendMessageParams) (*Message
 
 // SendMedia posts a media message using method and field for the verb-specific
 // Telegram Bot API call.
-func (c *Client) SendMedia(ctx context.Context, method string, field string, file InputFile, common CommonParams, extra map[string]string) (*Message, error) {
+func (c *Client) SendMedia(ctx context.Context, method string, field string, file InputFile, common CommonParams, extra map[string]string, extraFiles map[string]InputFile) (*Message, error) {
 	params := common.toParams()
 	for name, value := range extra {
 		params[name] = value
 	}
 	files := map[string]InputFile{
 		field: file,
+	}
+	for name, file := range extraFiles {
+		files[name] = file
 	}
 	return c.call(ctx, method, params, files)
 }
@@ -242,7 +246,11 @@ func addInputFilePart(writer *multipart.Writer, fieldName string, file InputFile
 	}
 	defer f.Close()
 
-	part, err := writer.CreateFormFile(fieldName, filepath.Base(file.Value))
+	fileName := file.FileName
+	if fileName == "" {
+		fileName = filepath.Base(file.Value)
+	}
+	part, err := writer.CreateFormFile(fieldName, fileName)
 	if err != nil {
 		return err
 	}
