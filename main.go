@@ -44,6 +44,8 @@ func run(args []string) int {
 		return cmdContact(args[1:])
 	case "dice":
 		return cmdDice(args[1:])
+	case "poll":
+		return cmdPoll(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}
