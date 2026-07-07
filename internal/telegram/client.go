@@ -127,16 +127,24 @@ func (p CommonParams) toParams() map[string]string {
 // SendMessageParams are the inputs for SendMessage. ParseMode may be empty,
 // "Markdown", "MarkdownV2", or "HTML".
 type SendMessageParams struct {
-	ChatID    string
-	Text      string
-	ParseMode string
+	ChatID              string
+	Text                string
+	ParseMode           string
+	ReplyToMessageID    int
+	DisableNotification bool
+	ProtectContent      bool
+	MessageThreadID     int
 }
 
 // SendMessage posts a text message to a chat and returns the sent message.
 func (c *Client) SendMessage(ctx context.Context, p SendMessageParams) (*Message, error) {
 	params := CommonParams{
-		ChatID:    p.ChatID,
-		ParseMode: p.ParseMode,
+		ChatID:              p.ChatID,
+		ParseMode:           p.ParseMode,
+		ReplyToMessageID:    p.ReplyToMessageID,
+		DisableNotification: p.DisableNotification,
+		ProtectContent:      p.ProtectContent,
+		MessageThreadID:     p.MessageThreadID,
 	}.toParams()
 	params["text"] = p.Text
 

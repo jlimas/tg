@@ -5,7 +5,7 @@ no Python/Node runtime, no external libraries at runtime — install it and
 send a message in two commands.
 
 ```sh
-$ tg send --to 123456789 --text "hello from tg"
+$ tg text --to 123456789 --message "hello from tg"
 sent: message 142 to 123456789
 ```
 
@@ -35,7 +35,7 @@ Create a bot with [@BotFather](https://t.me/BotFather) to get a token, then:
 tg config set --bot-token "123456:AAExample-Token" --default-chat-id 987654321
 ```
 
-`--default-chat-id` is optional — if set, `tg send` doesn't need `--to`.
+`--default-chat-id` is optional — if set, `tg text` doesn't need `--to`.
 Config is stored at `~/.config/tg/config.toml`.
 
 Bots can only message users who have started a chat with them, or
@@ -48,9 +48,9 @@ similar to find your numeric chat id.
 ```sh
 tg                                          # status and next steps
 tg config show                              # view current config (token masked)
-tg send --to 123456789 --text "hello"
-tg send --text "hello"                      # uses default_chat_id
-tg send --to 123456789 --text "*bold*" --parse-mode Markdown
+tg text --to 123456789 --message "hello"
+tg text --message "hello"                   # uses default_chat_id
+tg text --to 123456789 --message "*bold*" --parse-mode Markdown
 tg --help                                   # full command reference
 tg <command> --help                         # per-command flags and examples
 ```
@@ -73,7 +73,7 @@ shell.
 ```sh
 just --list    # see all available recipes
 just check     # gofmt, vet, build
-just run send --to 123456789 --text "test"
+just run text --to 123456789 --message "test"
 ```
 
 Releases are cut by pushing a `vX.Y.Z` tag; GitHub Actions builds
