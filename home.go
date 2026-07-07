@@ -29,6 +29,7 @@ func cmdHome() int {
 	output.Help(
 		`tg text --to <chat_id> --message "..."`,
 		`tg photo --to <chat_id> --file ./cat.jpg --caption "hi"`,
+		`tg document --to <chat_id> --file ./report.pdf --caption "Q3"`,
 		"tg config show",
 	)
 	return 0

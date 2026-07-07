@@ -81,7 +81,7 @@ func cmdPhoto(args []string) int {
 
 	file := telegram.ResolveInputFile(values["file"])
 	client := telegram.NewClient(cfg.BotToken)
-	msg, exitCode := sendMedia(client, "sendPhoto", "photo", file, common, extra)
+	msg, exitCode := sendMedia(client, "sendPhoto", "photo", file, common, extra, nil)
 	if exitCode != 0 {
 		return exitCode
 	}

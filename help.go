@@ -18,11 +18,13 @@ func cmdHelp() int {
 	fmt.Println("  config show  show the current configuration")
 	fmt.Println("  text         send a text message")
 	fmt.Println("  photo        send a photo")
+	fmt.Println("  document     send a document")
 	fmt.Println()
 	fmt.Println("examples:")
 	fmt.Println(`  tg config set --bot-token "123:ABC..."`)
 	fmt.Println(`  tg text --to 123456789 --message "hello"`)
 	fmt.Println(`  tg photo --to 123456789 --file ./cat.jpg --caption "hi"`)
+	fmt.Println(`  tg document --to 123456789 --file ./report.pdf --caption "Q3"`)
 	fmt.Println()
 	fmt.Println("run `tg <command> --help` for details on a specific command")
 	return 0
