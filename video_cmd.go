@@ -122,7 +122,7 @@ func cmdVideo(args []string) int {
 	}
 
 	client := telegram.NewClient(cfg.BotToken)
-	msg, exitCode := sendMedia(client, "sendVideo", "video", file, common, extra, extraFiles)
+	msg, exitCode := sendMedia(client, "sendVideo", "video", file, common, extra, extraFiles, "check --to and that the bot can message this chat")
 	if exitCode != 0 {
 		return exitCode
 	}

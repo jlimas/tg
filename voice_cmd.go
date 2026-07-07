@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"strconv"
 
 	"github.com/jlimas/tg/internal/cliflags"
 	"github.com/jlimas/tg/internal/config"
@@ -9,36 +10,35 @@ import (
 	"github.com/jlimas/tg/internal/telegram"
 )
 
-const photoUsage = `tg photo --to <chat_id> --file <path|url|file_id> [--caption "..."] [--parse-mode Markdown|MarkdownV2|HTML] [--reply-to <message_id>] [--silent] [--protect] [--thread <message_thread_id>] [--spoiler]`
+const voiceUsage = `tg voice --to <chat_id> --file <path|url|file_id> [--caption "..."] [--duration <seconds>] [--parse-mode Markdown|MarkdownV2|HTML] [--reply-to <message_id>] [--silent] [--protect] [--thread <message_thread_id>]`
 
-func cmdPhoto(args []string) int {
+func cmdVoice(args []string) int {
 	allowedFlags := append([]string{}, commonAllowedFlagNames...)
-	allowedFlags = append(allowedFlags, "file", "caption")
+	allowedFlags = append(allowedFlags, "file", "caption", "duration")
 	booleanFlags := append([]string{}, commonBooleanFlagNames...)
-	booleanFlags = append(booleanFlags, "spoiler")
 	values, _, err := cliflags.ParseWith(args, cliflags.Spec{
 		Allowed: allowedFlags,
 		Boolean: booleanFlags,
 	})
 	if err != nil {
-		return flagError(err, photoUsage)
+		return flagError(err, voiceUsage)
 	}
 	if values["help"] == "true" {
-		fmt.Println("tg photo — send a photo via the configured bot")
+		fmt.Println("tg voice — send a voice message via the configured bot")
 		fmt.Println()
 		fmt.Println("flags:")
 		fmt.Println("  --to <chat_id>             destination chat id (defaults to config's default_chat_id)")
-		fmt.Println("  --file <path|url|file_id>  photo file, URL, or Telegram file id (required)")
+		fmt.Println("  --file <path|url|file_id>  voice file, URL, or Telegram file id (required)")
 		fmt.Println(`  --caption "<text>"         caption text (optional)`)
+		fmt.Println("  --duration <seconds>       voice duration in seconds (optional)")
 		fmt.Println("  --parse-mode <mode>        Markdown, MarkdownV2, or HTML (optional)")
 		fmt.Println("  --reply-to <id>            reply to a message id (optional)")
 		fmt.Println("  --silent                   disable notification (optional)")
 		fmt.Println("  --protect                  protect content from forwarding/saving (optional)")
 		fmt.Println("  --thread <id>              message thread id for forum topics (optional)")
-		fmt.Println("  --spoiler                  mark photo with spoiler animation (optional)")
 		fmt.Println()
 		fmt.Println("example:")
-		fmt.Println(`  tg photo --to 123456789 --file ./cat.jpg --caption "hi"`)
+		fmt.Println(`  tg voice --to 123456789 --file ./note.ogg --caption "hi"`)
 		return 0
 	}
 
@@ -58,11 +58,11 @@ func cmdPhoto(args []string) int {
 	}
 
 	if values["file"] == "" {
-		output.Error("--file is required", photoUsage)
+		output.Error("--file is required", voiceUsage)
 		return 2
 	}
 
-	common, exitCode := commonParamsFrom(values, to, photoUsage)
+	common, exitCode := commonParamsFrom(values, to, voiceUsage)
 	if exitCode != 0 {
 		return exitCode
 	}
@@ -71,17 +71,17 @@ func cmdPhoto(args []string) int {
 	if values["caption"] != "" {
 		extra["caption"] = values["caption"]
 	}
-	spoiler, exitCode := boolFlag(values, "spoiler")
+	duration, exitCode := intFlag(values, "duration", voiceUsage)
 	if exitCode != 0 {
 		return exitCode
 	}
-	if spoiler {
-		extra["has_spoiler"] = "true"
+	if values["duration"] != "" {
+		extra["duration"] = strconv.Itoa(duration)
 	}
 
 	file := telegram.ResolveInputFile(values["file"])
 	client := telegram.NewClient(cfg.BotToken)
-	msg, exitCode := sendMedia(client, "sendPhoto", "photo", file, common, extra, nil, "check --to and that the bot can message this chat")
+	msg, exitCode := sendMedia(client, "sendVoice", "voice", file, common, extra, nil, "voice requires an OGG/OPUS file — try tg audio or tg document for other audio formats")
 	if exitCode != 0 {
 		return exitCode
 	}

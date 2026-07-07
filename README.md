@@ -53,6 +53,7 @@ tg photo --to 123456789 --file ./cat.jpg --caption "hi"
 tg document --to 123456789 --file ./report.pdf --caption "Q3"
 tg video --to 123456789 --file ./clip.mp4 --supports-streaming
 tg audio --to 123456789 --file ./song.mp3 --performer "X" --title "Y"
+tg voice --to 123456789 --file ./note.ogg
 tg text --message "hello"                   # uses default_chat_id
 tg text --to 123456789 --message "*bold*" --parse-mode Markdown
 tg --help                                   # full command reference
