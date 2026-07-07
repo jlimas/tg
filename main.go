@@ -28,6 +28,8 @@ func run(args []string) int {
 		return cmdVideo(args[1:])
 	case "media-group":
 		return cmdMediaGroup(args[1:])
+	case "paid-media":
+		return cmdPaidMedia(args[1:])
 	case "video-note":
 		return cmdVideoNote(args[1:])
 	case "animation":

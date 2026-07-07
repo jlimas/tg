@@ -53,6 +53,7 @@ tg photo --to 123456789 --file ./cat.jpg --caption "hi"
 tg document --to 123456789 --file ./report.pdf --caption "Q3"
 tg video --to 123456789 --file ./clip.mp4 --supports-streaming
 tg media-group --to 123456789 --file a.jpg --file b.jpg
+tg paid-media --to 123456789 --star-count 50 --file preview.jpg
 tg video-note --to 123456789 --file ./round.mp4
 tg animation --to 123456789 --file ./loop.gif --caption "launch"
 tg sticker --to 123456789 --file ./sticker.webp

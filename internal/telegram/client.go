@@ -216,6 +216,36 @@ func (c *Client) SendMediaGroup(ctx context.Context, common CommonParams, mediaT
 	return call[[]Message](ctx, c, "sendMediaGroup", params, uploads)
 }
 
+// SendPaidMedia posts a paid media message using Telegram's sendPaidMedia
+// method. starCount and media are required top-level parameters.
+func (c *Client) SendPaidMedia(ctx context.Context, common CommonParams, starCount int, mediaType string, files []InputFile, extra map[string]string) (*Message, error) {
+	params := common.toParams()
+	params["star_count"] = strconv.Itoa(starCount)
+	for name, value := range extra {
+		params[name] = value
+	}
+
+	uploads := make(map[string]InputFile)
+	media := make([]inputMediaItem, len(files))
+	for i, file := range files {
+		mediaValue := file.Value
+		if file.Kind == InputFileLocalUpload {
+			fieldName := fmt.Sprintf("file%d", i)
+			mediaValue = "attach://" + fieldName
+			uploads[fieldName] = file
+		}
+		media[i] = inputMediaItem{Type: mediaType, Media: mediaValue}
+	}
+
+	mediaJSON, err := json.Marshal(media)
+	if err != nil {
+		return nil, err
+	}
+	params["media"] = string(mediaJSON)
+
+	return c.call(ctx, "sendPaidMedia", params, uploads)
+}
+
 func (c *Client) call(ctx context.Context, method string, params map[string]string, files map[string]InputFile) (*Message, error) {
 	msg, err := call[Message](ctx, c, method, params, files)
 	if err != nil {

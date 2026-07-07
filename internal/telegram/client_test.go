@@ -726,6 +726,89 @@ func TestSendMediaGroupMixedFilesUploadOnlyLocalItems(t *testing.T) {
 	}
 }
 
+func TestSendPaidMediaLocalUploadUsesMultipartAndDecodesSingleMessage(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "preview.jpg")
+	if err := os.WriteFile(path, []byte("paid photo"), 0o600); err != nil {
+		t.Fatalf("write temp file: %v", err)
+	}
+
+	var gotReq *http.Request
+	var gotForm *multipart.Form
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		gotReq = req
+		form, err := req.MultipartReader()
+		if err != nil {
+			t.Fatalf("MultipartReader returned error: %v", err)
+		}
+		gotForm, err = form.ReadForm(1024 * 1024)
+		if err != nil {
+			t.Fatalf("ReadForm returned error: %v", err)
+		}
+		return okMessageResponse(), nil
+	})
+
+	msg, err := client.SendPaidMedia(context.Background(), CommonParams{
+		ChatID:    "123",
+		ParseMode: "HTML",
+	}, 50, "photo", []InputFile{
+		{Kind: InputFileLocalUpload, Value: path},
+	}, map[string]string{
+		"caption": "paid caption",
+	})
+	if err != nil {
+		t.Fatalf("SendPaidMedia returned error: %v", err)
+	}
+	if msg.MessageID != 42 {
+		t.Fatalf("MessageID = %d, want 42", msg.MessageID)
+	}
+	if gotReq == nil {
+		t.Fatal("no request captured")
+	}
+	if gotReq.URL.Path != "/botTOKEN/sendPaidMedia" {
+		t.Fatalf("URL path = %q, want /botTOKEN/sendPaidMedia", gotReq.URL.Path)
+	}
+	if gotReq.URL.RawQuery != "" {
+		t.Fatalf("RawQuery = %q, want empty", gotReq.URL.RawQuery)
+	}
+	if !strings.HasPrefix(gotReq.Header.Get("Content-Type"), "multipart/form-data;") {
+		t.Fatalf("Content-Type = %q, want multipart/form-data", gotReq.Header.Get("Content-Type"))
+	}
+	if gotForm == nil {
+		t.Fatal("no multipart form captured")
+	}
+	defer gotForm.RemoveAll()
+
+	wantValues := map[string]string{
+		"chat_id":    "123",
+		"parse_mode": "HTML",
+		"star_count": "50",
+		"caption":    "paid caption",
+	}
+	for name, value := range wantValues {
+		got := gotForm.Value[name]
+		if len(got) != 1 || got[0] != value {
+			t.Fatalf("%s = %#v, want [%q]", name, got, value)
+		}
+	}
+	media := parseMediaGroupJSON(t, gotForm.Value["media"])
+	wantMedia := []inputMediaItem{
+		{Type: "photo", Media: "attach://file0"},
+	}
+	assertMediaGroupItems(t, media, wantMedia)
+
+	files := gotForm.File["file0"]
+	if len(files) != 1 {
+		t.Fatalf("len(file0) = %d, want 1", len(files))
+	}
+	if files[0].Filename != "preview.jpg" {
+		t.Fatalf("file0 filename = %q, want preview.jpg", files[0].Filename)
+	}
+	if contents := readUploadedFile(t, files[0]); contents != "paid photo" {
+		t.Fatalf("file0 contents = %q, want paid photo", contents)
+	}
+}
+
 func okMessageResponse() *http.Response {
 	return &http.Response{
 		StatusCode: http.StatusOK,
