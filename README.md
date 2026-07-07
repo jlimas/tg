@@ -1,7 +1,8 @@
 # tg
 
-A small, [AXI](https://agentskills.io)-style CLI for sending Telegram messages
-through a bot — built for humans and agents to script from the shell.
+A fast, zero-dependency Telegram CLI, written in Go. One static binary,
+no Python/Node runtime, no external libraries at runtime — install it and
+send a message in two commands.
 
 ```sh
 $ tg send --to 123456789 --text "hello from tg"
@@ -54,10 +55,18 @@ tg --help                                   # full command reference
 tg <command> --help                         # per-command flags and examples
 ```
 
-Output follows [AXI](https://agentskills.io) conventions — compact,
-structured, and exit-code-driven — so it's as easy to script as it is to
-read: `0` on success, `1` on a runtime error (e.g. the Telegram API
-rejected the request), `2` on a usage error (missing/unknown flags).
+Exit codes are meaningful for scripting: `0` on success, `1` on a runtime
+error (e.g. the Telegram API rejected the request), `2` on a usage error
+(missing/unknown flags).
+
+## Design
+
+`tg`'s output follows [AXI](https://agentskills.io) conventions — compact,
+structured, predictable exit codes, no interactive prompts, no unknown
+flags silently ignored. That makes it just as easy to drive from a shell
+script or CI job as it is to read at a terminal, and it's why the CLI
+composes well as a tool call for LLM agents scripting Telegram from the
+shell.
 
 ## Development
 
