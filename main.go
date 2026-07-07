@@ -28,6 +28,8 @@ func run(args []string) int {
 		return cmdVideo(args[1:])
 	case "audio":
 		return cmdAudio(args[1:])
+	case "voice":
+		return cmdVoice(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}

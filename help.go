@@ -21,6 +21,7 @@ func cmdHelp() int {
 	fmt.Println("  document     send a document")
 	fmt.Println("  video        send a video")
 	fmt.Println("  audio        send an audio file")
+	fmt.Println("  voice        send a voice message")
 	fmt.Println()
 	fmt.Println("examples:")
 	fmt.Println(`  tg config set --bot-token "123:ABC..."`)
@@ -29,6 +30,7 @@ func cmdHelp() int {
 	fmt.Println(`  tg document --to 123456789 --file ./report.pdf --caption "Q3"`)
 	fmt.Println(`  tg video --to 123456789 --file ./clip.mp4 --supports-streaming`)
 	fmt.Println(`  tg audio --to 123456789 --file ./song.mp3 --performer "X" --title "Y"`)
+	fmt.Println(`  tg voice --to 123456789 --file ./note.ogg`)
 	fmt.Println()
 	fmt.Println("run `tg <command> --help` for details on a specific command")
 	return 0
