@@ -3,14 +3,14 @@ package main
 import (
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/jlimas/tg/internal/config"
 	"github.com/jlimas/tg/internal/output"
 	"github.com/jlimas/tg/internal/telegram"
 )
 
-var commonFlagNames = []string{"to", "parse-mode", "reply-to", "silent", "protect", "thread"}
+var commonAllowedFlagNames = []string{"to", "parse-mode", "reply-to", "thread"}
+var commonBooleanFlagNames = []string{"silent", "protect"}
 
 var validParseModes = map[string]bool{
 	"":           true,
@@ -47,13 +47,27 @@ func commonParamsFrom(values map[string]string, chatID string, usage string) (te
 		return telegram.CommonParams{}, exitCode
 	}
 
-	// cliflags does not support valueless boolean flags yet, so common send
-	// booleans intentionally require an explicit value such as --silent=true.
-	silent, exitCode := boolFlag(values, "silent")
+	readBoolean := func(name string) (bool, int) {
+		value, ok := values[name]
+		if !ok {
+			return false, 0
+		}
+		switch value {
+		case "true":
+			return true, 0
+		case "false":
+			return false, 0
+		default:
+			output.Error(fmt.Sprintf("invalid --%s %q", name, value), fmt.Sprintf("use --%s or --%s=false", name, name))
+			return false, 2
+		}
+	}
+
+	silent, exitCode := readBoolean("silent")
 	if exitCode != 0 {
 		return telegram.CommonParams{}, exitCode
 	}
-	protect, exitCode := boolFlag(values, "protect")
+	protect, exitCode := readBoolean("protect")
 	if exitCode != 0 {
 		return telegram.CommonParams{}, exitCode
 	}
@@ -79,20 +93,4 @@ func intFlag(values map[string]string, name string, usage string) (int, int) {
 		return 0, 2
 	}
 	return parsed, 0
-}
-
-func boolFlag(values map[string]string, name string) (bool, int) {
-	value, ok := values[name]
-	if !ok {
-		return false, 0
-	}
-	switch strings.ToLower(value) {
-	case "true":
-		return true, 0
-	case "false":
-		return false, 0
-	default:
-		output.Error(fmt.Sprintf("invalid --%s %q", name, value), fmt.Sprintf("use --%s=true or --%s=false", name, name))
-		return false, 2
-	}
 }

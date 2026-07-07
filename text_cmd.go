@@ -10,12 +10,16 @@ import (
 	"github.com/jlimas/tg/internal/telegram"
 )
 
-const textUsage = `tg text --to <chat_id> --message "..." [--parse-mode Markdown|MarkdownV2|HTML] [--reply-to <message_id>] [--silent=true] [--protect=true] [--thread <message_thread_id>]`
+const textUsage = `tg text --to <chat_id> --message "..." [--parse-mode Markdown|MarkdownV2|HTML] [--reply-to <message_id>] [--silent] [--protect] [--thread <message_thread_id>]`
 
 func cmdText(args []string) int {
-	allowedFlags := append([]string{}, commonFlagNames...)
+	allowedFlags := append([]string{}, commonAllowedFlagNames...)
 	allowedFlags = append(allowedFlags, "message")
-	values, err := cliflags.Parse(args, allowedFlags)
+	booleanFlags := append([]string{}, commonBooleanFlagNames...)
+	values, _, err := cliflags.ParseWith(args, cliflags.Spec{
+		Allowed: allowedFlags,
+		Boolean: booleanFlags,
+	})
 	if err != nil {
 		return flagError(err, textUsage)
 	}
@@ -27,8 +31,8 @@ func cmdText(args []string) int {
 		fmt.Println(`  --message "<text>"    message text (required)`)
 		fmt.Println("  --parse-mode <mode>   Markdown, MarkdownV2, or HTML (optional)")
 		fmt.Println("  --reply-to <id>       reply to a message id (optional)")
-		fmt.Println("  --silent=true         disable notification (optional; explicit value required)")
-		fmt.Println("  --protect=true        protect content from forwarding/saving (optional; explicit value required)")
+		fmt.Println("  --silent              disable notification (optional)")
+		fmt.Println("  --protect             protect content from forwarding/saving (optional)")
 		fmt.Println("  --thread <id>         message thread id for forum topics (optional)")
 		fmt.Println()
 		fmt.Println("example:")
