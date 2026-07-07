@@ -151,6 +151,19 @@ func (c *Client) SendMessage(ctx context.Context, p SendMessageParams) (*Message
 	return c.call(ctx, "sendMessage", params, nil)
 }
 
+// SendMedia posts a media message using method and field for the verb-specific
+// Telegram Bot API call.
+func (c *Client) SendMedia(ctx context.Context, method string, field string, file InputFile, common CommonParams, extra map[string]string) (*Message, error) {
+	params := common.toParams()
+	for name, value := range extra {
+		params[name] = value
+	}
+	files := map[string]InputFile{
+		field: file,
+	}
+	return c.call(ctx, method, params, files)
+}
+
 func (c *Client) call(ctx context.Context, method string, params map[string]string, files map[string]InputFile) (*Message, error) {
 	formParams := make(map[string]string, len(params)+len(files))
 	for name, value := range params {

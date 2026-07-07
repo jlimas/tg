@@ -49,6 +49,7 @@ similar to find your numeric chat id.
 tg                                          # status and next steps
 tg config show                              # view current config (token masked)
 tg text --to 123456789 --message "hello"
+tg photo --to 123456789 --file ./cat.jpg --caption "hi"
 tg text --message "hello"                   # uses default_chat_id
 tg text --to 123456789 --message "*bold*" --parse-mode Markdown
 tg --help                                   # full command reference

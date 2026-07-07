@@ -20,6 +20,8 @@ func run(args []string) int {
 		return dispatchConfig(args[1:])
 	case "text":
 		return cmdText(args[1:])
+	case "photo":
+		return cmdPhoto(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}
