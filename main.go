@@ -30,6 +30,8 @@ func run(args []string) int {
 		return cmdVideoNote(args[1:])
 	case "animation":
 		return cmdAnimation(args[1:])
+	case "sticker":
+		return cmdSticker(args[1:])
 	case "audio":
 		return cmdAudio(args[1:])
 	case "voice":

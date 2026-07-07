@@ -54,6 +54,7 @@ tg document --to 123456789 --file ./report.pdf --caption "Q3"
 tg video --to 123456789 --file ./clip.mp4 --supports-streaming
 tg video-note --to 123456789 --file ./round.mp4
 tg animation --to 123456789 --file ./loop.gif --caption "launch"
+tg sticker --to 123456789 --file ./sticker.webp
 tg audio --to 123456789 --file ./song.mp3 --performer "X" --title "Y"
 tg voice --to 123456789 --file ./note.ogg
 tg location --to 123456789 --lat 40.7580 --long -73.9855

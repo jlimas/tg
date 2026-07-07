@@ -33,6 +33,7 @@ func cmdHome() int {
 		`tg video --to <chat_id> --file ./clip.mp4 --supports-streaming`,
 		`tg video-note --to <chat_id> --file ./round.mp4`,
 		`tg animation --to <chat_id> --file ./loop.gif --caption "launch"`,
+		`tg sticker --to <chat_id> --file ./sticker.webp`,
 		`tg audio --to <chat_id> --file ./song.mp3 --performer "X" --title "Y"`,
 		`tg voice --to <chat_id> --file ./note.ogg`,
 		`tg location --to <chat_id> --lat 40.7580 --long -73.9855`,
