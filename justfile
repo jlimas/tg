@@ -44,3 +44,9 @@ config-show: build
 # Open the config file in $EDITOR
 config-edit:
     ${EDITOR:-vi} ~/.config/{{bin_name}}/config.toml
+
+# Tag and push a release (e.g. `just release v0.1.0`) — triggers the release workflow
+release version: check
+    git tag -a {{version}} -m "{{version}}"
+    git push origin {{version}}
+    @echo "pushed tag {{version}} — release workflow: https://github.com/jlimas/tg/actions"

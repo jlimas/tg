@@ -1,14 +1,30 @@
 # tg
 
-A small AXI-style CLI for sending Telegram messages through a bot.
+A small, [AXI](https://agentskills.io)-style CLI for sending Telegram messages
+through a bot — built for humans and agents to script from the shell.
+
+```sh
+$ tg send --to 123456789 --text "hello from tg"
+sent: message 142 to 123456789
+```
 
 ## Install
 
 ```sh
-just install   # builds and copies to ~/.local/bin/tg
+curl -fsSL https://raw.githubusercontent.com/jlimas/tg/main/install.sh | sh
 ```
 
-See `just --list` for all available commands (build, check, fmt, run, clean).
+This downloads the latest release binary for your OS/arch into
+`~/.local/bin`. Override the destination with `INSTALL_DIR=/some/path`, or
+pin a version with `VERSION=v0.1.0`.
+
+Alternatively, build from source (requires Go 1.25+):
+
+```sh
+git clone https://github.com/jlimas/tg
+cd tg
+just install   # or: go build -o ~/.local/bin/tg .
+```
 
 ## Setup
 
@@ -18,18 +34,49 @@ Create a bot with [@BotFather](https://t.me/BotFather) to get a token, then:
 tg config set --bot-token "123456:AAExample-Token" --default-chat-id 987654321
 ```
 
-`default_chat_id` is optional — if set, `tg send` doesn't need `--to`.
-
+`--default-chat-id` is optional — if set, `tg send` doesn't need `--to`.
 Config is stored at `~/.config/tg/config.toml`.
+
+Bots can only message users who have started a chat with them, or
+groups/channels they've been added to — send `/start` to your bot first to
+get it to respond, and use [@userinfobot](https://t.me/userinfobot) or
+similar to find your numeric chat id.
 
 ## Usage
 
 ```sh
-tg                                          # show status and next steps
+tg                                          # status and next steps
+tg config show                              # view current config (token masked)
 tg send --to 123456789 --text "hello"
-tg config show
-tg --help
+tg send --text "hello"                      # uses default_chat_id
+tg send --to 123456789 --text "*bold*" --parse-mode Markdown
+tg --help                                   # full command reference
+tg <command> --help                         # per-command flags and examples
 ```
 
-Bots can only message users who have started a chat with them, or
-groups/channels they've been added to — send a `/start` to your bot first.
+Output follows [AXI](https://agentskills.io) conventions — compact,
+structured, and exit-code-driven — so it's as easy to script as it is to
+read: `0` on success, `1` on a runtime error (e.g. the Telegram API
+rejected the request), `2` on a usage error (missing/unknown flags).
+
+## Development
+
+```sh
+just --list    # see all available recipes
+just check     # gofmt, vet, build
+just run send --to 123456789 --text "test"
+```
+
+Releases are cut by pushing a `vX.Y.Z` tag; GitHub Actions builds
+cross-platform binaries with [goreleaser](https://goreleaser.com) and
+publishes them to GitHub Releases.
+
+## Roadmap
+
+MVP covers sending text messages. Natural next steps: photo/file uploads,
+reading incoming messages (`getUpdates`), and multi-bot/account config
+profiles.
+
+## License
+
+[MIT](LICENSE)
