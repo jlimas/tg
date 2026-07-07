@@ -59,6 +59,7 @@ tg voice --to 123456789 --file ./note.ogg
 tg location --to 123456789 --lat 40.7580 --long -73.9855
 tg venue --to 123456789 --lat 40.75 --long -73.98 --title "MSG" --address "4 Penn Plaza"
 tg contact --to 123456789 --phone "+15551234567" --first-name "Ada"
+tg dice --to 123456789 --emoji "🎯"
 tg text --message "hello"                   # uses default_chat_id
 tg text --to 123456789 --message "*bold*" --parse-mode Markdown
 tg --help                                   # full command reference
