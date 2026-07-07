@@ -36,6 +36,7 @@ func cmdHome() int {
 		`tg audio --to <chat_id> --file ./song.mp3 --performer "X" --title "Y"`,
 		`tg voice --to <chat_id> --file ./note.ogg`,
 		`tg location --to <chat_id> --lat 40.7580 --long -73.9855`,
+		`tg venue --to <chat_id> --lat 40.75 --long -73.98 --title "MSG" --address "4 Penn Plaza"`,
 		"tg config show",
 	)
 	return 0
