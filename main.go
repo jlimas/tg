@@ -34,6 +34,8 @@ func run(args []string) int {
 		return cmdAudio(args[1:])
 	case "voice":
 		return cmdVoice(args[1:])
+	case "location":
+		return cmdLocation(args[1:])
 	default:
 		return unknownCommand(args[0])
 	}
