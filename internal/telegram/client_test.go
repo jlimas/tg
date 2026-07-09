@@ -3,6 +3,7 @@ package telegram
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -806,6 +807,108 @@ func TestSendPaidMediaLocalUploadUsesMultipartAndDecodesSingleMessage(t *testing
 	}
 	if contents := readUploadedFile(t, files[0]); contents != "paid photo" {
 		t.Fatalf("file0 contents = %q, want paid photo", contents)
+	}
+}
+
+func TestGetUpdatesSendsOffsetAndTimeout(t *testing.T) {
+	var gotReq *http.Request
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		gotReq = req
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{"ok": true, "result": []}`)),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	updates, err := client.GetUpdates(context.Background(), 55, 25)
+	if err != nil {
+		t.Fatalf("GetUpdates returned error: %v", err)
+	}
+	if len(updates) != 0 {
+		t.Fatalf("updates = %#v, want empty", updates)
+	}
+	if gotReq == nil {
+		t.Fatal("no request captured")
+	}
+	if gotReq.URL.Path != "/botTOKEN/getUpdates" {
+		t.Fatalf("URL path = %q, want /botTOKEN/getUpdates", gotReq.URL.Path)
+	}
+	query := gotReq.URL.Query()
+	if query.Get("offset") != "55" {
+		t.Fatalf("offset = %q, want 55", query.Get("offset"))
+	}
+	if query.Get("timeout") != "25" {
+		t.Fatalf("timeout = %q, want 25", query.Get("timeout"))
+	}
+}
+
+func TestGetUpdatesParsesMessages(t *testing.T) {
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body: io.NopCloser(strings.NewReader(`{
+				"ok": true,
+				"result": [
+					{
+						"update_id": 900,
+						"message": {
+							"message_id": 7,
+							"date": 1234567890,
+							"text": "hi there",
+							"chat": {"id": 123},
+							"from": {"username": "ada", "first_name": "Ada"}
+						}
+					}
+				]
+			}`)),
+			Header: make(http.Header),
+		}, nil
+	})
+
+	updates, err := client.GetUpdates(context.Background(), 0, 0)
+	if err != nil {
+		t.Fatalf("GetUpdates returned error: %v", err)
+	}
+	if len(updates) != 1 {
+		t.Fatalf("len(updates) = %d, want 1", len(updates))
+	}
+	if updates[0].UpdateID != 900 {
+		t.Fatalf("UpdateID = %d, want 900", updates[0].UpdateID)
+	}
+	if updates[0].Message == nil {
+		t.Fatal("Message = nil, want set")
+	}
+	if updates[0].Message.Text != "hi there" {
+		t.Fatalf("Text = %q, want %q", updates[0].Message.Text, "hi there")
+	}
+	if updates[0].Message.Chat.ID != 123 {
+		t.Fatalf("Chat.ID = %d, want 123", updates[0].Message.Chat.ID)
+	}
+	if updates[0].Message.From.Username != "ada" {
+		t.Fatalf("From.Username = %q, want %q", updates[0].Message.From.Username, "ada")
+	}
+}
+
+func TestGetUpdatesPropagatesAPIError(t *testing.T) {
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body:       io.NopCloser(strings.NewReader(`{"ok": false, "error_code": 409, "description": "conflict"}`)),
+			Header:     make(http.Header),
+		}, nil
+	})
+
+	_, err := client.GetUpdates(context.Background(), 0, 0)
+	var apiErr *APIError
+	if !errors.As(err, &apiErr) {
+		t.Fatalf("err = %T %v, want *APIError", err, err)
+	}
+	if apiErr.Code != 409 {
+		t.Fatalf("Code = %d, want 409", apiErr.Code)
 	}
 }
 

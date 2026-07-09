@@ -71,6 +71,7 @@ tg venue [--to 123456789] --lat 40.75 --long -73.98 --title "MSG" --address "4 P
 tg contact [--to 123456789] --phone "+15551234567" --first-name "Ada"
 tg dice [--to 123456789] --emoji "🎯"
 tg poll [--to 123456789] --question "Lunch?" --option Pizza --option Tacos
+tg listen                                     # wait for the next message from default_chat_id
 
 tg text --message "hello"                    # no --to: sends to default_chat_id
 tg text --to 123456789 --message "*bold*" --parse-mode Markdown
@@ -81,6 +82,32 @@ tg <command> --help                          # per-command flags and examples
 Exit codes are meaningful for scripting: `0` on success, `1` on a runtime
 error (e.g. the Telegram API rejected the request), `2` on a usage error
 (missing/unknown flags).
+
+### Listening for replies
+
+`tg listen` long-polls Telegram's `getUpdates` and blocks until the next
+message arrives, printing it and exiting:
+
+```sh
+$ tg listen
+messages[1]{message_id,from,text}:
+  201,@ada,sounds good
+```
+
+Limitations, by design (`tg` is a one-shot sender/receiver, not a bot
+server):
+
+- Only messages sent to the configured `default_chat_id` are surfaced.
+  Messages from any other chat are silently discarded (their update is
+  still acknowledged, so they won't reappear or block later calls) — there
+  is no `--to` override for `listen`.
+- It polls in 25s chunks for up to a **5 minute hard cap**, then exits with
+  a "no messages received" result if nothing arrived.
+- Nothing is printed while waiting — no progress output, no partial
+  results — only the final outcome (message(s) found, or the timeout).
+- Messages that arrived before `tg listen` was started (backlog) are
+  drained and acknowledged on startup but not shown; only messages sent
+  after `listen` begins are surfaced.
 
 ## Design
 
