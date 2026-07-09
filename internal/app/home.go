@@ -43,6 +43,7 @@ func CmdHome() int {
 		`tg contact --to <chat_id> --phone "+15551234567" --first-name "Ada"`,
 		`tg dice --to <chat_id> --emoji "🎯"`,
 		`tg poll --to <chat_id> --question "Lunch?" --option Pizza --option Tacos`,
+		"tg listen",
 		"tg config show",
 	)
 	return 0

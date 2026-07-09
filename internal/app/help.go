@@ -32,6 +32,7 @@ func CmdHelp() int {
 	fmt.Println("  contact      send a contact")
 	fmt.Println("  dice         send a dice animation")
 	fmt.Println("  poll         send a poll")
+	fmt.Println("  listen       wait for the next message from the default chat")
 	fmt.Println()
 	fmt.Println("examples:")
 	fmt.Println(`  tg config set --bot-token "123:ABC..."`)
@@ -51,6 +52,7 @@ func CmdHelp() int {
 	fmt.Println(`  tg contact --to 123456789 --phone "+15551234567" --first-name "Ada"`)
 	fmt.Println(`  tg dice --to 123456789 --emoji "🎯"`)
 	fmt.Println(`  tg poll --to 123456789 --question "Lunch?" --option Pizza --option Tacos`)
+	fmt.Println(`  tg listen`)
 	fmt.Println()
 	fmt.Println("run `tg <command> --help` for details on a specific command")
 	return 0

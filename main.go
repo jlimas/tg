@@ -54,6 +54,8 @@ func run(args []string) int {
 		return app.CmdDice(args[1:])
 	case "poll":
 		return app.CmdPoll(args[1:])
+	case "listen":
+		return app.CmdListen(args[1:])
 	default:
 		return app.UnknownCommand(args[0])
 	}

@@ -254,6 +254,58 @@ func (c *Client) call(ctx context.Context, method string, params map[string]stri
 	return &msg, nil
 }
 
+// Update is the subset of Telegram's Update object tg cares about.
+type Update struct {
+	UpdateID int64            `json:"update_id"`
+	Message  *IncomingMessage `json:"message,omitempty"`
+}
+
+// IncomingMessage is the subset of an incoming Telegram message tg surfaces
+// via GetUpdates.
+type IncomingMessage struct {
+	MessageID int    `json:"message_id"`
+	Date      int64  `json:"date"`
+	Text      string `json:"text"`
+	Chat      struct {
+		ID int64 `json:"id"`
+	} `json:"chat"`
+	From struct {
+		Username  string `json:"username"`
+		FirstName string `json:"first_name"`
+	} `json:"from"`
+	ReplyToMessage *struct {
+		MessageID int `json:"message_id"`
+	} `json:"reply_to_message,omitempty"`
+}
+
+// GetUpdates long-polls Telegram's getUpdates method for new updates.
+// offset is the lowest update_id to return (callers pass the previous
+// highest update_id + 1 to acknowledge prior updates); timeoutSeconds bounds
+// how long Telegram holds the connection open waiting for a new update.
+//
+// The request's own HTTP client uses a longer timeout than timeoutSeconds so
+// the long-poll connection isn't cut short client-side; callers bound the
+// overall wait via ctx instead.
+func (c *Client) GetUpdates(ctx context.Context, offset int64, timeoutSeconds int) ([]Update, error) {
+	params := url.Values{}
+	params.Set("offset", strconv.FormatInt(offset, 10))
+	params.Set("timeout", strconv.Itoa(timeoutSeconds))
+	params.Set("allowed_updates", `["message"]`)
+
+	endpoint := fmt.Sprintf("%s/bot%s/getUpdates", apiBase, c.token)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.URL.RawQuery = params.Encode()
+
+	pollClient := &http.Client{
+		Timeout:   time.Duration(timeoutSeconds+10) * time.Second,
+		Transport: c.httpClient.Transport,
+	}
+	return do[[]Update](pollClient, req)
+}
+
 func call[T any](ctx context.Context, c *Client, method string, params map[string]string, files map[string]InputFile) (T, error) {
 	formParams := make(map[string]string, len(params)+len(files))
 	for name, value := range params {
@@ -297,7 +349,7 @@ func callForm[T any](ctx context.Context, c *Client, endpoint string, params map
 	}
 	req.URL.RawQuery = form.Encode()
 
-	return do[T](c, req)
+	return do[T](c.httpClient, req)
 }
 
 func (c *Client) callMultipart(ctx context.Context, endpoint string, params map[string]string, files map[string]InputFile) (*Message, error) {
@@ -340,7 +392,7 @@ func callMultipart[T any](ctx context.Context, c *Client, endpoint string, param
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 
-	return do[T](c, req)
+	return do[T](c.httpClient, req)
 }
 
 func addInputFilePart(writer *multipart.Writer, fieldName string, file InputFile) error {
@@ -363,15 +415,15 @@ func addInputFilePart(writer *multipart.Writer, fieldName string, file InputFile
 }
 
 func (c *Client) do(req *http.Request) (*Message, error) {
-	msg, err := do[Message](c, req)
+	msg, err := do[Message](c.httpClient, req)
 	if err != nil {
 		return nil, err
 	}
 	return &msg, nil
 }
 
-func do[T any](c *Client, req *http.Request) (T, error) {
-	resp, err := c.httpClient.Do(req)
+func do[T any](client *http.Client, req *http.Request) (T, error) {
+	resp, err := client.Do(req)
 	if err != nil {
 		var zero T
 		return zero, fmt.Errorf("contacting telegram: %w", err)
