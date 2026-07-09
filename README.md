@@ -90,9 +90,13 @@ message arrives, printing it and exiting:
 
 ```sh
 $ tg listen
-messages[1]{message_id,from,text}:
-  201,@ada,sounds good
+messages[1]{message_id,from,reply_to,text}:
+  201,@ada,142,sounds good
 ```
+
+`reply_to` is the `message_id` of the message being replied to (empty if
+it isn't a reply) — cross-reference it against the id `tg text`/etc. printed
+when you sent that message to correlate the two.
 
 Limitations, by design (`tg` is a one-shot sender/receiver, not a bot
 server):

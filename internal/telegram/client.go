@@ -273,6 +273,9 @@ type IncomingMessage struct {
 		Username  string `json:"username"`
 		FirstName string `json:"first_name"`
 	} `json:"from"`
+	ReplyToMessage *struct {
+		MessageID int `json:"message_id"`
+	} `json:"reply_to_message,omitempty"`
 }
 
 // GetUpdates long-polls Telegram's getUpdates method for new updates.

@@ -79,9 +79,9 @@ func CmdListen(args []string) int {
 		return 0
 	}
 
-	fmt.Printf("messages[%d]{message_id,from,text}:\n", len(messages))
+	fmt.Printf("messages[%d]{message_id,from,reply_to,text}:\n", len(messages))
 	for _, m := range messages {
-		fmt.Printf("  %d,%s,%s\n", m.MessageID, toonField(fromDisplay(m)), toonField(m.Text))
+		fmt.Printf("  %d,%s,%s,%s\n", m.MessageID, toonField(fromDisplay(m)), replyToID(m), toonField(m.Text))
 	}
 	output.Help(`tg text --to <chat_id> --message "..."`)
 	return 0
@@ -150,6 +150,16 @@ func fromDisplay(m telegram.IncomingMessage) string {
 		return "@" + m.From.Username
 	}
 	return m.From.FirstName
+}
+
+// replyToID returns the message_id m is replying to, or "" if it isn't a
+// reply — lets callers correlate an inbound reply with the outbound
+// message_id printed when it was sent.
+func replyToID(m telegram.IncomingMessage) string {
+	if m.ReplyToMessage == nil {
+		return ""
+	}
+	return strconv.Itoa(m.ReplyToMessage.MessageID)
 }
 
 // toonField quotes s if it contains a character that would otherwise be

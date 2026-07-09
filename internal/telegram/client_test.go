@@ -892,6 +892,59 @@ func TestGetUpdatesParsesMessages(t *testing.T) {
 	}
 }
 
+func TestGetUpdatesParsesReplyToMessage(t *testing.T) {
+	client := NewClient("TOKEN")
+	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {
+		return &http.Response{
+			StatusCode: http.StatusOK,
+			Body: io.NopCloser(strings.NewReader(`{
+				"ok": true,
+				"result": [
+					{
+						"update_id": 900,
+						"message": {
+							"message_id": 175,
+							"date": 1234567890,
+							"text": "sounds good",
+							"chat": {"id": 123},
+							"from": {"username": "ada"},
+							"reply_to_message": {"message_id": 142}
+						}
+					},
+					{
+						"update_id": 901,
+						"message": {
+							"message_id": 176,
+							"date": 1234567891,
+							"text": "not a reply",
+							"chat": {"id": 123},
+							"from": {"username": "ada"}
+						}
+					}
+				]
+			}`)),
+			Header: make(http.Header),
+		}, nil
+	})
+
+	updates, err := client.GetUpdates(context.Background(), 0, 0)
+	if err != nil {
+		t.Fatalf("GetUpdates returned error: %v", err)
+	}
+	if len(updates) != 2 {
+		t.Fatalf("len(updates) = %d, want 2", len(updates))
+	}
+	if updates[0].Message.ReplyToMessage == nil {
+		t.Fatal("ReplyToMessage = nil, want set")
+	}
+	if updates[0].Message.ReplyToMessage.MessageID != 142 {
+		t.Fatalf("ReplyToMessage.MessageID = %d, want 142", updates[0].Message.ReplyToMessage.MessageID)
+	}
+	if updates[1].Message.ReplyToMessage != nil {
+		t.Fatalf("ReplyToMessage = %#v, want nil", updates[1].Message.ReplyToMessage)
+	}
+}
+
 func TestGetUpdatesPropagatesAPIError(t *testing.T) {
 	client := NewClient("TOKEN")
 	client.httpClient.Transport = roundTripFunc(func(req *http.Request) (*http.Response, error) {

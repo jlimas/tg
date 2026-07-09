@@ -170,6 +170,23 @@ func TestFromDisplayPrefersUsername(t *testing.T) {
 	}
 }
 
+func TestReplyToIDReturnsEmptyWhenNotAReply(t *testing.T) {
+	m := telegram.IncomingMessage{}
+	if got := replyToID(m); got != "" {
+		t.Fatalf("replyToID = %q, want empty", got)
+	}
+}
+
+func TestReplyToIDReturnsRepliedMessageID(t *testing.T) {
+	m := telegram.IncomingMessage{}
+	m.ReplyToMessage = &struct {
+		MessageID int `json:"message_id"`
+	}{MessageID: 142}
+	if got := replyToID(m); got != "142" {
+		t.Fatalf("replyToID = %q, want %q", got, "142")
+	}
+}
+
 func TestToonFieldQuotesSpecialChars(t *testing.T) {
 	if got := toonField("plain"); got != "plain" {
 		t.Fatalf("toonField(plain) = %q, want %q", got, "plain")
